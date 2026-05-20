@@ -22,4 +22,3 @@ export const verifyToken = (token) => {
     throw new Error('Invalid or expired token');
   }
 };
- 

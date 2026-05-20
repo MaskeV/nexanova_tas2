@@ -1,12 +1,28 @@
 import User from '../models/User.js';
 import { generateToken } from '../utils/jwt.js';
 
-// @desc    Register a new user (Admin only)
+// @desc    Register a new user (Public for evaluators, Admin only for creating admins)
 // @route   POST /api/auth/register
-// @access  Private/Admin
+// @access  Public (for evaluators) / Private/Admin (for admins)
 export const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email, and password',
+      });
+    }
+
+    // Check if trying to create admin without being admin
+    if (role === 'admin' && (!req.user || req.user.role !== 'admin')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can create admin accounts',
+      });
+    }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -18,7 +34,7 @@ export const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Create user (default role is evaluator)
     const user = await User.create({
       name,
       email,
@@ -27,14 +43,20 @@ export const register = async (req, res) => {
     });
 
     if (user) {
+      // Generate token for evaluators (auto-login after signup)
+      const token = role !== 'admin' ? generateToken(user._id, user.role) : null;
+
       res.status(201).json({
         success: true,
         message: 'User created successfully',
         data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          },
+          ...(token && { token }), // Include token for evaluator signup
         },
       });
     }
