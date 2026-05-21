@@ -11,6 +11,13 @@ import Dashboard from './component/dashboard/Dashboard';
 import UserManagement from './component/admin/UserManagement';
 import ChangePassword from './component/auth/ChangePassword';
 
+// MockEvaluation modules
+import BatchManagement from './component/MockEvaluation/BatchManagement';
+import TechnologyManagement from './component/MockEvaluation/TechnologyManagement';
+import EvaluationManagement from './component/MockEvaluation/EvaluationManagement';
+import EvaluatorDashboard from './component/MockEvaluation/EvaluatorDashboard';
+import ReportsDashboard from './component/MockEvaluation/ReportsDashboard';
+
 // ── Spinner ───────────────────────────────────────────────
 const LoadingSpinner = () => (
   <div style={{
@@ -45,7 +52,6 @@ const ProtectedRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
-  // If already logged in, send to dashboard
   if (user) return <Navigate to="/dashboard" replace />;
   return children;
 };
@@ -55,6 +61,14 @@ const AdminRoute = ({ children }) => {
   if (loading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return children;
+};
+
+const EvaluatorRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/login" replace />;
+  // Both admin and evaluator can access evaluator views
   return children;
 };
 
@@ -72,12 +86,19 @@ const AppRoutes = () => (
     <Route path="/login"  element={<PublicRoute><Login /></PublicRoute>} />
     <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
-    {/* Protected */}
-    <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
+    {/* Protected (any authenticated user) */}
+    <Route path="/dashboard"       element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
     <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 
+    {/* Evaluator features (evaluator + admin) */}
+    <Route path="/my-evaluations"  element={<EvaluatorRoute><EvaluatorDashboard /></EvaluatorRoute>} />
+
     {/* Admin only */}
-    <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+    <Route path="/users"           element={<AdminRoute><UserManagement /></AdminRoute>} />
+    <Route path="/batches"         element={<AdminRoute><BatchManagement /></AdminRoute>} />
+    <Route path="/technologies"    element={<AdminRoute><TechnologyManagement /></AdminRoute>} />
+    <Route path="/evaluations"     element={<AdminRoute><EvaluationManagement /></AdminRoute>} />
+    <Route path="/reports"         element={<AdminRoute><ReportsDashboard /></AdminRoute>} />
 
     {/* Catch-all */}
     <Route path="/" element={<Navigate to="/dashboard" replace />} />

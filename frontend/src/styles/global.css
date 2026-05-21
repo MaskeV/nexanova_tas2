@@ -87,7 +87,7 @@
 /* Dark Mode Support (Optional) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --text-primary: #f3f4f6;
+    --text-primary: black;
     --text-secondary: #d1d5db;
     --text-light: #9ca3af;
     

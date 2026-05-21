@@ -61,30 +61,56 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
+      console.log('📤 Sending signup request with:', {
+        name: formData.name,
+        email: formData.email,
+        role: 'evaluator'
+      });
+
       const response = await authAPI.register({
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        role: 'evaluator', // Always evaluator for public signup
+        role: 'evaluator',
       });
+
+      console.log('✅ Full response:', response);
+      console.log('Response data:', response.data);
 
       if (response.data.success) {
         toast.success('Account created successfully!');
         
-        // If token is returned (auto-login), save it and redirect
-        if (response.data.data.token) {
-          localStorage.setItem('token', response.data.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        // Check if token is in response
+        if (response.data.token) {
+          console.log('🔐 Token found in response, saving to localStorage');
+          localStorage.setItem('token', response.data.token);
+          
+          // Save user data if available
+          if (response.data.data) {
+            localStorage.setItem('user', JSON.stringify(response.data.data));
+          }
+          
+          console.log('✅ Redirecting to dashboard');
           navigate('/dashboard');
         } else {
-          // Otherwise, redirect to login
+          // No token - just go to login
+          console.log('⚠️ No token in response, redirecting to login');
+          toast.info('Account created! Please login.');
           navigate('/login');
         }
+      } else {
+        console.log('❌ Success flag is false:', response.data.message);
+        toast.error(response.data.message || 'Registration failed');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to create account';
+      console.error('❌ Signup error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to create account';
       toast.error(errorMessage);
-      console.error('Signup error:', error);
     } finally {
       setIsLoading(false);
     }

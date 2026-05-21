@@ -1,15 +1,75 @@
 import { useAuth } from '../../context/authContext';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { getMyEvaluations } from '../../services/evaluationService';
 import '../../styles/Dashboard.css';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [evalStats, setEvalStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMyEvaluations()
+      .then(res => {
+        const evals = res.data || [];
+        setEvalStats({
+          total:     evals.length,
+          pending:   evals.filter(e => e.status === 'pending').length,
+          inProgress:evals.filter(e => e.status === 'in-progress').length,
+          completed: evals.filter(e => e.status === 'completed').length,
+        });
+      })
+      .catch(() => setEvalStats(null))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const cards = [
+    {
+      icon: '📝',
+      title: 'My Evaluations',
+      description: 'View and submit your assigned evaluations',
+      route: '/my-evaluations',
+      live: true,
+    },
+    {
+      icon: '🔒',
+      title: 'Change Password',
+      description: 'Update your account password',
+      route: '/change-password',
+      live: true,
+    },
+    {
+      icon: '📊',
+      title: 'Progress Tracking',
+      description: 'Monitor your evaluation progress',
+      live: false,
+    },
+    {
+      icon: '📚',
+      title: 'Evaluation Guidelines',
+      description: 'Access evaluation standards and guidelines',
+      live: false,
+    },
+    {
+      icon: '❓',
+      title: 'Help & Support',
+      description: 'Get help with evaluation system',
+      live: false,
+    },
+    {
+      icon: '⚙️',
+      title: 'Settings',
+      description: 'Manage your account preferences',
+      live: false,
+    },
+  ];
 
   return (
     <div className="dashboard-container">
@@ -19,98 +79,67 @@ const Dashboard = () => {
           <h2>Mock Evaluation System</h2>
         </div>
         <div className="navbar-menu">
-          <span className="user-info">
-            {user?.name} ({user?.role})
-          </span>
-          <button onClick={handleLogout} className="btn btn-secondary">
-            Logout
-          </button>
+          <span className="user-info">{user?.name} · Evaluator</span>
+          <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
         </div>
       </nav>
 
       <div className="dashboard-content">
         <div className="welcome-section">
           <h1>Welcome, {user?.name}!</h1>
-          <p className="text-muted">Role: <strong>{user?.role.toUpperCase()}</strong></p>
+          <p className="text-muted">Here's your evaluation overview.</p>
         </div>
 
-        <div className="cards-grid">
-          <div className="card">
-            <div className="card-icon">📝</div>
-            <h3>My Evaluations</h3>
-            <p>View and manage your assigned evaluations</p>
-            <span className="badge">Coming Soon</span>
-          </div>
-
-          <div className="card">
-            <div className="card-icon">📊</div>
-            <h3>Progress Tracking</h3>
-            <p>Monitor your evaluation progress</p>
-            <span className="badge">Coming Soon</span>
-          </div>
-
-          <div className="card">
-            <div className="card-icon">📚</div>
-            <h3>Evaluation Guidelines</h3>
-            <p>Access evaluation standards and guidelines</p>
-            <span className="badge">Coming Soon</span>
-          </div>
-
-          <div 
-            className="card" 
-            onClick={() => navigate('/change-password')}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className="card-icon">🔒</div>
-            <h3>Change Password</h3>
-            <p>Update your account password</p>
-          </div>
-
-          <div className="card">
-            <div className="card-icon">❓</div>
-            <h3>Help & Support</h3>
-            <p>Get help with evaluation system</p>
-            <span className="badge">Coming Soon</span>
-          </div>
-
-          <div className="card">
-            <div className="card-icon">⚙️</div>
-            <h3>Settings</h3>
-            <p>Manage your account preferences</p>
-            <span className="badge">Coming Soon</span>
-          </div>
-        </div>
-
-        <div style={{ 
-          marginTop: '3rem', 
-          padding: '2rem', 
-          backgroundColor: 'white', 
-          borderRadius: 'var(--radius-xl)',
-          border: '1px solid var(--border-color)'
-        }}>
+        {/* Quick Stats */}
+        <div style={{ marginBottom: '2.5rem' }}>
           <h3 style={{ marginBottom: '1rem' }}>Quick Stats</h3>
           <div className="stats-grid">
             <div className="stat-box">
-              <div className="stat-label">Evaluations Completed</div>
-              <div className="stat-value">0</div>
-              <div className="stat-change">+0% this month</div>
+              <div className="stat-label">Pending</div>
+              <div className="stat-value" style={{ color: '#f59e0b' }}>
+                {loading ? '…' : (evalStats?.pending ?? '—')}
+              </div>
+              <div className="stat-change">Awaiting your review</div>
             </div>
             <div className="stat-box">
-              <div className="stat-label">Pending Evaluations</div>
-              <div className="stat-value">0</div>
-              <div className="stat-change">No pending</div>
+              <div className="stat-label">In Progress</div>
+              <div className="stat-value" style={{ color: '#3b82f6' }}>
+                {loading ? '…' : (evalStats?.inProgress ?? '—')}
+              </div>
+              <div className="stat-change">Currently open</div>
             </div>
             <div className="stat-box">
-              <div className="stat-label">Average Score</div>
-              <div className="stat-value">-</div>
-              <div className="stat-change">No data yet</div>
+              <div className="stat-label">Completed</div>
+              <div className="stat-value" style={{ color: '#10b981' }}>
+                {loading ? '…' : (evalStats?.completed ?? '—')}
+              </div>
+              <div className="stat-change">All time</div>
             </div>
             <div className="stat-box">
-              <div className="stat-label">Last Activity</div>
-              <div className="stat-value">-</div>
-              <div className="stat-change">No activity</div>
+              <div className="stat-label">Total Assigned</div>
+              <div className="stat-value">
+                {loading ? '…' : (evalStats?.total ?? '—')}
+              </div>
+              <div className="stat-change">Across all rounds</div>
             </div>
           </div>
+        </div>
+
+        {/* Cards */}
+        <div className="cards-grid">
+          {cards.map((card) => (
+            <div
+              key={card.title}
+              className="card"
+              onClick={() => card.live && card.route && navigate(card.route)}
+              style={{ cursor: card.live ? 'pointer' : 'default' }}
+            >
+              <div className="card-icon">{card.icon}</div>
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+              {!card.live && <span className="badge">Coming Soon</span>}
+            </div>
+          ))}
         </div>
       </div>
     </div>
