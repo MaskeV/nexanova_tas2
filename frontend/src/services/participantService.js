@@ -1,15 +1,15 @@
-// frontend/src/services/studentService.js
+// frontend/src/services/participantService.js
 import api from './api';
 
-const STUDENT_BASE = '/participants';
+const PARTICIPANT_BASE = '/participants';
 
-// Get all students (participants)
-export const getAllStudents = async (filters = {}) => {
+// Get all participants
+export const getAllParticipants = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     if (filters.isActive !== undefined) params.append('isActive', filters.isActive);
     
-    const url = params.toString() ? `${STUDENT_BASE}?${params}` : STUDENT_BASE;
+    const url = params.toString() ? `${PARTICIPANT_BASE}?${params}` : PARTICIPANT_BASE;
     const response = await api.get(url);
     return response.data;
   } catch (error) {
@@ -17,40 +17,40 @@ export const getAllStudents = async (filters = {}) => {
   }
 };
 
-// Get student by ID
-export const getStudentById = async (studentId) => {
+// Get participant by ID
+export const getParticipantById = async (participantId) => {
   try {
-    const response = await api.get(`${STUDENT_BASE}/${studentId}`);
+    const response = await api.get(`${PARTICIPANT_BASE}/${participantId}`);
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Create student (admin only)
-export const createStudent = async (studentData) => {
+// Create participant (admin only)
+export const createParticipant = async (participantData) => {
   try {
-    const response = await api.post(STUDENT_BASE, studentData);
+    const response = await api.post(PARTICIPANT_BASE, participantData);
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Update student (admin only)
-export const updateStudent = async (studentId, studentData) => {
+// Update participant (admin only)
+export const updateParticipant = async (participantId, participantData) => {
   try {
-    const response = await api.put(`${STUDENT_BASE}/${studentId}`, studentData);
+    const response = await api.put(`${PARTICIPANT_BASE}/${participantId}`, participantData);
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Delete student (admin only)
-export const deleteStudent = async (studentId) => {
+// Delete participant (admin only)
+export const deleteParticipant = async (participantId) => {
   try {
-    const response = await api.delete(`${STUDENT_BASE}/${studentId}`);
+    const response = await api.delete(`${PARTICIPANT_BASE}/${participantId}`);
     return response.data;
   } catch (error) {
     throw error;

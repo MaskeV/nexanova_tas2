@@ -50,6 +50,12 @@ const UserManagement = () => {
   };
 
   const handleEditClick = (userItem) => {
+    // Prevent editing admin users
+    if (userItem.role === 'admin') {
+      toast.error('You cannot edit admin users');
+      return;
+    }
+
     setEditingUser(userItem);
     setFormData({
       name: userItem.name,
@@ -65,7 +71,7 @@ const UserManagement = () => {
     setFormData({
       name: '',
       email: '',
-      role: 'evaluator',
+      role: 'evaluator', // Always create evaluators only
       isActive: true,
     });
     setShowModal(true);
@@ -80,23 +86,35 @@ const UserManagement = () => {
       return;
     }
 
+    // Force role to evaluator (security measure)
+    const dataToSubmit = {
+      ...formData,
+      role: 'evaluator',
+    };
+
     try {
       if (editingUser) {
+        // Additional check: prevent editing admin users
+        if (editingUser.role === 'admin') {
+          toast.error('You cannot edit admin users');
+          return;
+        }
+
         // Update existing user
-        const response = await authAPI.updateUser(editingUser._id, formData);
+        const response = await authAPI.updateUser(editingUser._id, dataToSubmit);
         if (response.data.success) {
           toast.success('User updated successfully');
           loadUsers();
           setShowModal(false);
         }
       } else {
-        // Create new admin user
+        // Create new evaluator user
         const response = await authAPI.register({
-          ...formData,
+          ...dataToSubmit,
           password: 'Temp@12345', // Temporary password
         });
         if (response.data.success) {
-          toast.success('Admin user created successfully');
+          toast.success('Evaluator user created successfully');
           loadUsers();
           setShowModal(false);
         }
@@ -108,8 +126,18 @@ const UserManagement = () => {
   };
 
   const handleDeleteClick = async (userId) => {
+    // Find the user to check their role
+    const userToDelete = users.find(u => u._id === userId);
+    
+    // Prevent deleting your own account
     if (userId === user._id) {
       toast.error('Cannot delete your own account');
+      return;
+    }
+
+    // Prevent deleting admin users
+    if (userToDelete?.role === 'admin') {
+      toast.error('You cannot delete admin users');
       return;
     }
 
@@ -194,7 +222,7 @@ const UserManagement = () => {
                 className="btn btn-primary"
                 onClick={handleCreateClick}
               >
-                + New User
+                + New Evaluator
               </button>
             </div>
           </div>
@@ -240,13 +268,22 @@ const UserManagement = () => {
                           <button
                             className="action-btn action-btn-edit"
                             onClick={() => handleEditClick(u)}
+                            disabled={u.role === 'admin'}
+                            title={u.role === 'admin' ? 'Cannot edit admin users' : 'Edit user'}
                           >
                             Edit
                           </button>
                           <button
                             className="action-btn action-btn-delete"
                             onClick={() => handleDeleteClick(u._id)}
-                            disabled={u._id === user._id}
+                            disabled={u._id === user._id || u.role === 'admin'}
+                            title={
+                              u._id === user._id 
+                                ? 'Cannot delete yourself' 
+                                : u.role === 'admin' 
+                                ? 'Cannot delete admin users' 
+                                : 'Delete user'
+                            }
                           >
                             Delete
                           </button>
@@ -289,7 +326,7 @@ const UserManagement = () => {
             boxShadow: 'var(--shadow-xl)',
           }}>
             <h2 style={{ marginBottom: 'var(--spacing-lg)' }}>
-              {editingUser ? 'Edit User' : 'Create New Admin User'}
+              {editingUser ? 'Edit Evaluator' : 'Create New Evaluator'}
             </h2>
 
             <form onSubmit={handleSubmit}>
@@ -301,7 +338,7 @@ const UserManagement = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  placeholder="Enter user name"
+                  placeholder="Enter evaluator name"
                 />
               </div>
 
@@ -318,17 +355,8 @@ const UserManagement = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Role</label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                >
-                  <option value="evaluator">Evaluator</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+              {/* Role field removed - always evaluator */}
+              <input type="hidden" name="role" value="evaluator" />
 
               <div className="form-group">
                 <label>
@@ -341,6 +369,19 @@ const UserManagement = () => {
                   {' '}Active Account
                 </label>
               </div>
+
+              {!editingUser && (
+                <div style={{ 
+                  backgroundColor: '#f0f9ff', 
+                  padding: '12px', 
+                  borderRadius: '8px',
+                  marginBottom: 'var(--spacing-lg)',
+                  fontSize: '14px',
+                  color: '#0369a1'
+                }}>
+                  <strong>Note:</strong> Temporary password will be: <code>Temp@12345</code>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '10px', marginTop: 'var(--spacing-lg)' }}>
                 <button

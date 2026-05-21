@@ -10,7 +10,6 @@ import {
   removeParticipantFromBatch,
 } from '../../services/batchService';
 import { getAllTechnologies } from '../../services/technologyService';
-import { getAllParticipants } from '../../services/participantService'; // Import participant service
 import PageLayout from './PageLayout';
 import './MockEvaluation.css';
 
