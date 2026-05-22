@@ -15,7 +15,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 // Logging middleware — next() was missing, causing all requests to hang
 router.use((req, res, next) => {
   console.log(`📝 Evaluation Route: ${req.method} ${req.path}`);
-  next(); // ← this was missing
+
 });
 
 // All routes require authentication

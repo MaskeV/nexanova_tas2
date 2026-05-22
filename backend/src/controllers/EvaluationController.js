@@ -3,6 +3,7 @@ const Evaluation = require('../models/Evaluation');
 const Batch = require('../models/Batch');
 const Technology = require('../models/Technology');
 const User = require('../models/User');
+const Participant = require('../models/Participant')
 
 // @desc    Create evaluation assignment (Admin assigns evaluator to participant for specific round)
 // @route   POST /api/evaluations/assign
@@ -46,7 +47,7 @@ const assignEvaluation = async (req, res) => {
     }
     
     // Verify participant exists and is in the batch
-    const participant = await User.findById(participantId);
+    const participant = await Participant.findById(participantId);
     if (!participant) {
       return res.status(404).json({
         success: false,
