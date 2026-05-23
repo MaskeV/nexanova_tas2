@@ -1,9 +1,9 @@
-// backend/src/models/Evaluation.js - Mock Evaluation Model
+// backend/src/models/Evaluation.js
 const mongoose = require('mongoose');
 
 const evaluationSchema = new mongoose.Schema({
   batch: {
-    type: String, // Reference to Batch.batchId
+    type: String,
     required: [true, 'Batch is required'],
     ref: 'Batch'
   },
@@ -18,7 +18,7 @@ const evaluationSchema = new mongoose.Schema({
     required: [true, 'Evaluator is required']
   },
   technology: {
-    type: String, // Reference to Technology.technologyId
+    type: String,
     required: [true, 'Technology is required'],
     ref: 'Technology'
   },
@@ -119,4 +119,5 @@ evaluationSchema.pre('save', function(next) {
   next();
 });
 
+// ✅ CORRECT - Only export the model, nothing else
 module.exports = mongoose.model('Evaluation', evaluationSchema);
