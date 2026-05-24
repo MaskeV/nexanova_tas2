@@ -8,15 +8,18 @@ const Participant = require('../models/Participant')
 // @desc    Create evaluation assignment (Admin assigns evaluator to participant for specific round)
 // @route   POST /api/evaluations/assign
 // @access  Admin
+// @desc    Create evaluation assignment (Admin assigns evaluator to participant for specific round)
+// @route   POST /api/evaluations/assign
+// @access  Admin
 const assignEvaluation = async (req, res) => {
   try {
-    const { batchId, participantId, evaluatorId, round, technology } = req.body;
+    const { batchId, participantIds, evaluatorId, round, technology } = req.body;
     
     // Validate required fields
-    if (!batchId || !participantId || !evaluatorId || !round || !technology) {
+    if (!batchId || !participantIds || !Array.isArray(participantIds) || participantIds.length === 0 || !evaluatorId || !round || !technology) {
       return res.status(400).json({
         success: false,
-        message: 'Batch ID, participant ID, evaluator ID, round, and technology are required'
+        message: 'Batch ID, participant IDs (array), evaluator ID, round, and technology are required'
       });
     }
     
@@ -46,22 +49,6 @@ const assignEvaluation = async (req, res) => {
       });
     }
     
-    // Verify participant exists and is in the batch
-    const participant = await Participant.findById(participantId);
-    if (!participant) {
-      return res.status(404).json({
-        success: false,
-        message: 'Participant not found or is not a student'
-      });
-    }
-    
-    if (!batch.participants.includes(participantId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Participant is not in this batch'
-      });
-    }
-    
     // Verify evaluator exists
     const evaluator = await User.findById(evaluatorId);
     if (!evaluator) {
@@ -71,44 +58,92 @@ const assignEvaluation = async (req, res) => {
       });
     }
     
-    // Check if evaluation already exists for this participant, round, and technology
-    const existingEvaluation = await Evaluation.findOne({
-      batch: batchId,
-      participant: participantId,
-      round,
-      technology
-    });
+    // Process each participant
+    const results = {
+      created: [],
+      skipped: [],
+      errors: []
+    };
     
-    if (existingEvaluation) {
+    for (const participantId of participantIds) {
+      try {
+        // Verify participant exists and is in the batch
+        const participant = await Participant.findById(participantId);
+        if (!participant) {
+          results.errors.push({
+            participantId,
+            message: 'Participant not found'
+          });
+          continue;
+        }
+        
+        if (!batch.participants.includes(participantId)) {
+          results.errors.push({
+            participantId,
+            message: 'Participant is not in this batch'
+          });
+          continue;
+        }
+        
+        // Check if evaluation already exists for this participant, round, and technology
+        const existingEvaluation = await Evaluation.findOne({
+          batch: batchId,
+          participant: participantId,
+          round,
+          technology
+        });
+        
+        if (existingEvaluation) {
+          results.skipped.push({
+            participantId,
+            participantName: participant.name,
+            message: 'Evaluation already assigned'
+          });
+          continue;
+        }
+        
+        // Create evaluation assignment
+        const evaluation = await Evaluation.create({
+          batch: batchId,
+          participant: participantId,
+          evaluator: evaluatorId,
+          technology,
+          round,
+          assignedBy: req.user._id
+        });
+        
+        // Populate details
+        await evaluation.populate([
+          { path: 'participant', select: 'name email' },
+          { path: 'evaluator', select: 'name email' }
+        ]);
+        
+        results.created.push(evaluation);
+        console.log('✅ Evaluation assigned:', evaluation._id);
+        
+      } catch (error) {
+        results.errors.push({
+          participantId,
+          message: error.message
+        });
+      }
+    }
+    
+    // Determine response status
+    if (results.created.length === 0 && results.errors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Evaluation already assigned for this participant, round, and technology'
+        message: 'Failed to create any evaluations',
+        results
       });
     }
     
-    // Create evaluation assignment
-    const evaluation = await Evaluation.create({
-      batch: batchId,
-      participant: participantId,
-      evaluator: evaluatorId,
-      technology,
-      round,
-      assignedBy: req.user._id
-    });
-    
-    // Populate details
-    await evaluation.populate([
-      { path: 'participant', select: 'username email' },
-      { path: 'evaluator', select: 'username email' }
-    ]);
-    
-    console.log('✅ Evaluation assigned:', evaluation._id);
-    
     res.status(201).json({
       success: true,
-      message: 'Evaluation assigned successfully',
-      data: evaluation
+      message: `Successfully assigned ${results.created.length} evaluation(s)`,
+      results
     });
+    
   } catch (error) {
     console.error('❌ Assign evaluation error:', error);
     
