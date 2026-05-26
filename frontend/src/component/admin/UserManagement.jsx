@@ -5,6 +5,8 @@ import { useAuth } from '../../context/authContext';
 import { toast } from 'react-toastify';
 import '../../styles/Dashboard.css';
 
+const TEMP_PASSWORD = 'Temp@12345';
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,6 +14,7 @@ const UserManagement = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [lastCreated, setLastCreated] = useState(null); // track newly created user
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,7 +24,6 @@ const UserManagement = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Load users on component mount
   useEffect(() => {
     loadUsers();
   }, []);
@@ -43,19 +45,14 @@ const UserManagement = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
   };
 
   const handleEditClick = (userItem) => {
-    // Prevent editing admin users
     if (userItem.role === 'admin') {
       toast.error('You cannot edit admin users');
       return;
     }
-
     setEditingUser(userItem);
     setFormData({
       name: userItem.name,
@@ -63,44 +60,32 @@ const UserManagement = () => {
       role: userItem.role,
       isActive: userItem.isActive,
     });
+    setLastCreated(null);
     setShowModal(true);
   };
 
   const handleCreateClick = () => {
     setEditingUser(null);
-    setFormData({
-      name: '',
-      email: '',
-      role: 'evaluator', // Always create evaluators only
-      isActive: true,
-    });
+    setLastCreated(null);
+    setFormData({ name: '', email: '', role: 'evaluator', isActive: true });
     setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validation
     if (!formData.name.trim() || !formData.email.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    // Force role to evaluator (security measure)
-    const dataToSubmit = {
-      ...formData,
-      role: 'evaluator',
-    };
+    const dataToSubmit = { ...formData, role: 'evaluator' };
 
     try {
       if (editingUser) {
-        // Additional check: prevent editing admin users
         if (editingUser.role === 'admin') {
           toast.error('You cannot edit admin users');
           return;
         }
-
-        // Update existing user
         const response = await authAPI.updateUser(editingUser._id, dataToSubmit);
         if (response.data.success) {
           toast.success('User updated successfully');
@@ -108,15 +93,15 @@ const UserManagement = () => {
           setShowModal(false);
         }
       } else {
-        // Create new evaluator user
         const response = await authAPI.register({
           ...dataToSubmit,
-          password: 'Temp@12345', // Temporary password
+          password: TEMP_PASSWORD,
         });
         if (response.data.success) {
-          toast.success('Evaluator user created successfully');
+          toast.success('Evaluator created successfully');
+          setLastCreated({ name: formData.name, email: formData.email });
           loadUsers();
-          setShowModal(false);
+          // Keep modal open to show credentials
         }
       }
     } catch (error) {
@@ -126,20 +111,9 @@ const UserManagement = () => {
   };
 
   const handleDeleteClick = async (userId) => {
-    // Find the user to check their role
     const userToDelete = users.find(u => u._id === userId);
-    
-    // Prevent deleting your own account
-    if (userId === user._id) {
-      toast.error('Cannot delete your own account');
-      return;
-    }
-
-    // Prevent deleting admin users
-    if (userToDelete?.role === 'admin') {
-      toast.error('You cannot delete admin users');
-      return;
-    }
+    if (userId === user._id) { toast.error('Cannot delete your own account'); return; }
+    if (userToDelete?.role === 'admin') { toast.error('You cannot delete admin users'); return; }
 
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -150,19 +124,14 @@ const UserManagement = () => {
         }
       } catch (error) {
         toast.error('Failed to delete user');
-        console.error('Error:', error);
       }
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Filter and search users
   const filteredUsers = users.filter(u => {
-    const matchesSearch = 
+    const matchesSearch =
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || u.role === filterRole;
@@ -173,9 +142,7 @@ const UserManagement = () => {
     return (
       <div className="dashboard-container">
         <nav className="navbar">
-          <div className="navbar-brand">
-            <h2>User Management</h2>
-          </div>
+          <div className="navbar-brand"><h2>User Management</h2></div>
         </nav>
         <div className="loading-container" style={{ justifyContent: 'center' }}>
           <div className="spinner"></div>
@@ -188,14 +155,10 @@ const UserManagement = () => {
   return (
     <div className="dashboard-container">
       <nav className="navbar">
-        <div className="navbar-brand">
-          <h2>User Management</h2>
-        </div>
+        <div className="navbar-brand"><h2>User Management</h2></div>
         <div className="navbar-menu">
           <span className="user-info">{user?.name}</span>
-          <button onClick={handleLogout} className="btn btn-secondary">
-            Logout
-          </button>
+          <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
         </div>
       </nav>
 
@@ -210,18 +173,12 @@ const UserManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <select 
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
-              >
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
                 <option value="all">All Roles</option>
                 <option value="admin">Admin</option>
                 <option value="evaluator">Evaluator</option>
               </select>
-              <button 
-                className="btn btn-primary"
-                onClick={handleCreateClick}
-              >
+              <button className="btn btn-primary" onClick={handleCreateClick}>
                 + New Evaluator
               </button>
             </div>
@@ -278,11 +235,9 @@ const UserManagement = () => {
                             onClick={() => handleDeleteClick(u._id)}
                             disabled={u._id === user._id || u.role === 'admin'}
                             title={
-                              u._id === user._id 
-                                ? 'Cannot delete yourself' 
-                                : u.role === 'admin' 
-                                ? 'Cannot delete admin users' 
-                                : 'Delete user'
+                              u._id === user._id ? 'Cannot delete yourself'
+                              : u.role === 'admin' ? 'Cannot delete admin users'
+                              : 'Delete user'
                             }
                           >
                             Delete
@@ -304,103 +259,127 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Modal for Add/Edit User */}
+      {/* Add / Edit Modal */}
       {showModal && (
         <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 1000,
         }}>
           <div style={{
             backgroundColor: 'white',
             borderRadius: 'var(--radius-xl)',
             padding: 'var(--spacing-2xl)',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
+            maxWidth: '500px', width: '90%',
+            maxHeight: '90vh', overflow: 'auto',
             boxShadow: 'var(--shadow-xl)',
           }}>
             <h2 style={{ marginBottom: 'var(--spacing-lg)' }}>
-              {editingUser ? 'Edit Evaluator' : 'Create New Evaluator'}
+              {editingUser ? 'Edit Evaluator' : lastCreated ? '✅ Evaluator Created' : 'Create New Evaluator'}
             </h2>
 
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter evaluator name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Enter email address"
-                  disabled={!!editingUser}
-                />
-              </div>
-
-              {/* Role field removed - always evaluator */}
-              <input type="hidden" name="role" value="evaluator" />
-
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={formData.isActive}
-                    onChange={handleInputChange}
-                  />
-                  {' '}Active Account
-                </label>
-              </div>
-
-              {!editingUser && (
-                <div style={{ 
-                  backgroundColor: '#f0f9ff', 
-                  padding: '12px', 
-                  borderRadius: '8px',
-                  marginBottom: 'var(--spacing-lg)',
-                  fontSize: '14px',
-                  color: '#0369a1'
-                }}>
-                  <strong>Note:</strong> Temporary password will be: <code>Temp@12345</code>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: 'var(--spacing-lg)' }}>
+            {/* Show credentials after successful creation */}
+            {lastCreated && (
+              <div style={{
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #86efac',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '20px',
+              }}>
+                <p style={{ fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>
+                  Share these login credentials with the user:
+                </p>
+                <p style={{ margin: '4px 0', fontSize: '14px' }}>
+                  <strong>Email:</strong> {lastCreated.email}
+                </p>
+                <p style={{ margin: '4px 0', fontSize: '14px' }}>
+                  <strong>Temporary Password:</strong>{' '}
+                  <code style={{
+                    backgroundColor: '#dcfce7', padding: '2px 8px',
+                    borderRadius: '4px', fontWeight: 'bold', letterSpacing: '1px'
+                  }}>
+                    {TEMP_PASSWORD}
+                  </code>
+                </p>
+                <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '8px' }}>
+                  The user should change their password after first login.
+                </p>
                 <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                  style={{ flex: 1 }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
                   className="btn btn-primary"
-                  style={{ flex: 1 }}
+                  style={{ marginTop: '12px', width: '100%' }}
+                  onClick={() => setShowModal(false)}
                 >
-                  {editingUser ? 'Update' : 'Create'}
+                  Done
                 </button>
               </div>
-            </form>
+            )}
+
+            {/* Hide form once created */}
+            {!lastCreated && (
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label>Name</label>
+                  <input
+                    type="text" name="name"
+                    value={formData.name} onChange={handleInputChange}
+                    required placeholder="Enter evaluator name"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email" name="email"
+                    value={formData.email} onChange={handleInputChange}
+                    required placeholder="Enter email address"
+                    disabled={!!editingUser}
+                  />
+                </div>
+
+                <input type="hidden" name="role" value="evaluator" />
+
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox" name="isActive"
+                      checked={formData.isActive} onChange={handleInputChange}
+                    />
+                    {' '}Active Account
+                  </label>
+                </div>
+
+                {!editingUser && (
+                  <div style={{
+                    backgroundColor: '#f0f9ff', padding: '12px',
+                    borderRadius: '8px', marginBottom: 'var(--spacing-lg)',
+                    fontSize: '14px', color: '#0369a1'
+                  }}>
+                    <strong>Temporary password:</strong>{' '}
+                    <code style={{ backgroundColor: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
+                      {TEMP_PASSWORD}
+                    </code>
+                    <br />
+                    <span style={{ fontSize: '12px' }}>
+                      You will be shown this again after creation to share with the user.
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: 'var(--spacing-lg)' }}>
+                  <button
+                    type="button" className="btn btn-secondary"
+                    onClick={() => setShowModal(false)} style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                    {editingUser ? 'Update' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

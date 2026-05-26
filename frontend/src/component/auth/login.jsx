@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { toast } from 'react-toastify';
 import '../../styles/Auth.css';
@@ -8,7 +7,6 @@ const Login = () => {
   const [formData, setFormData]   = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  // No useNavigate here — PublicRoute handles the redirect when user state updates
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,8 +19,7 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       if (result.success) {
         toast.success('Login successful!');
-        // No navigate() call — PublicRoute will redirect automatically
-        // once setUser() fires in authContext and user state becomes non-null
+        // PublicRoute handles redirect automatically once user state updates
       } else {
         toast.error(result.message || 'Login failed');
       }
@@ -81,13 +78,8 @@ const Login = () => {
         </form>
 
         <div className="auth-footer">
-          <p>
-            Don't have an account?{' '}
-            <Link to="/signup" className="auth-link">Sign up here</Link>
-          </p>
-          <p className="text-muted">
-            Demo Admin: admin@example.com / admin123<br />
-            Demo Evaluator: eval@example.com / eval123
+          <p className="text-muted" style={{ fontSize: '13px', color: '#6b7280' }}>
+            Contact your administrator if you need access.
           </p>
         </div>
       </div>

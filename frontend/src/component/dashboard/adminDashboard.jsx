@@ -31,6 +31,13 @@ const AdminDashboard = () => {
       color: '#3b82f6',
     },
     {
+      icon: '🎓',
+      title: 'Participant Management',
+      description: 'Add, edit, and manage participant details and information',
+      route: '/participants',
+      color: '#06b6d4',
+    },
+    {
       icon: '📦',
       title: 'Batches',
       description: 'Create, edit, and manage evaluation batches with participants',
@@ -58,12 +65,11 @@ const AdminDashboard = () => {
       route: '/reports',
       color: '#10b981',
     },
-  
   ];
 
   const statItems = [
     { label: 'Total Batches',         value: stats?.totalBatches,          icon: '📦', color: '#8b5cf6' },
-    { label: 'Participants',           value: stats?.totalParticipants,     icon: '🎓', color: '#3b82f6' },
+    { label: 'Participants',           value: stats?.totalParticipants,     icon: '🎓', color: '#06b6d4' },
     { label: 'Total Evaluations',      value: stats?.totalEvaluations,      icon: '📋', color: '#f59e0b' },
     { label: 'Completed',              value: stats?.completedEvaluations,  icon: '✅', color: '#10b981' },
     { label: 'Avg Score',              value: stats?.averageScore != null ? Number(stats.averageScore).toFixed(1) : null, icon: '⭐', color: '#ef4444' },
@@ -89,10 +95,9 @@ const AdminDashboard = () => {
           <h1>Welcome back, {user?.name}!</h1>
         </div>
 
-       
-
+      
         {/* ── Admin Cards ── */}
-        <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Quick Actions</h3>
+        <h3 style={{ marginBottom: '1rem', color: '#1e293b' }}>Management Tools</h3>
         <div className="cards-grid">
           {adminCards.map((card) => (
             <div
@@ -110,6 +115,64 @@ const AdminDashboard = () => {
           ))}
         </div>
       </div>
+
+      <style>{`
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .stat-box {
+          background: white;
+          border-radius: 12px;
+          padding: 1.5rem;
+          border-top: 3px solid;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          text-align: center;
+        }
+
+        .stat-icon {
+          font-size: 2rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .stat-value {
+          font-size: 1.75rem;
+          font-weight: 800;
+        }
+
+        @media (max-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem;
+          }
+
+          .stat-box {
+            padding: 1rem;
+          }
+
+          .stat-icon {
+            font-size: 1.5rem;
+          }
+
+          .stat-value {
+            font-size: 1.25rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -12,8 +12,6 @@ import Dashboard from './component/dashboard/Dashboard';
 import UserManagement from './component/admin/UserManagement';
 import ChangePassword from './component/auth/ChangePassword';
 
-
-
 // MockEvaluation modules
 import BatchManagement from './component/MockEvaluation/BatchManagement';
 import TechnologyManagement from './component/MockEvaluation/TechnologyManagement';
@@ -110,11 +108,11 @@ const AppRoutes = () => {
 
       {/* Admin only */}
       <Route path="/users"           element={<AdminRoute><UserManagement /></AdminRoute>} />
+      <Route path="/participants"    element={<AdminRoute><ParticipantManagement /></AdminRoute>} />
       <Route path="/batches"         element={<AdminRoute><BatchManagement /></AdminRoute>} />
       <Route path="/technologies"    element={<AdminRoute><TechnologyManagement /></AdminRoute>} />
       <Route path="/evaluations"     element={<AdminRoute><EvaluationManagement /></AdminRoute>} />
       <Route path="/reports"         element={<AdminRoute><ReportsDashboard /></AdminRoute>} />
-      <Route prth="/participants"    element={<AdminRoute><ParticipantManagement/></AdminRoute>}/>
 
       {/* Catch-all */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

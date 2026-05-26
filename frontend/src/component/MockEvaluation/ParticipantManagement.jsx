@@ -15,6 +15,8 @@ const ParticipantManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingParticipant, setEditingParticipant] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterActive, setFilterActive] = useState('all');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -23,23 +25,16 @@ const ParticipantManagement = () => {
     isActive: true,
   });
 
-  const [filters, setFilters] = useState({ isActive: null, search: '' });
-
   useEffect(() => {
     fetchParticipants();
-  }, [filters.isActive]);
+  }, []);
 
   const fetchParticipants = async () => {
     try {
       setLoading(true);
-      const filterParams = {};
-      if (filters.isActive !== null) {
-        filterParams.isActive = filters.isActive;
-      }
-      
-      const response = await getAllParticipants(filterParams);
-      setParticipants(response.data || []);
-      console.log('✅ Participants loaded:', response.data?.length);
+      const res = await getAllParticipants();
+      setParticipants(res.data || []);
+      console.log('✅ Participants loaded:', res.data?.length);
     } catch (error) {
       console.error('❌ Error fetching participants:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch participants');
@@ -57,24 +52,14 @@ const ParticipantManagement = () => {
     }));
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (name === 'isActive') {
-      if (value === '') {
-        setFilters(prev => ({ ...prev, [name]: null }));
-      } else if (value === 'true') {
-        setFilters(prev => ({ ...prev, [name]: true }));
-      } else if (value === 'false') {
-        setFilters(prev => ({ ...prev, [name]: false }));
-      }
-    } else {
-      setFilters(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.name.trim() || !formData.email.trim()) {
+      toast.error('Name and email are required');
+      return;
+    }
+
     try {
       if (editingParticipant) {
         await updateParticipant(editingParticipant.participantId, formData);
@@ -87,8 +72,8 @@ const ParticipantManagement = () => {
       resetForm();
       fetchParticipants();
     } catch (error) {
+      console.error('❌ Error saving participant:', error);
       toast.error(error.response?.data?.message || 'Failed to save participant');
-      console.error('Save participant error:', error);
     }
   };
 
@@ -110,8 +95,8 @@ const ParticipantManagement = () => {
       toast.success('Participant deleted successfully!');
       fetchParticipants();
     } catch (error) {
+      console.error('❌ Error deleting participant:', error);
       toast.error(error.response?.data?.message || 'Failed to delete participant');
-      console.error('Delete participant error:', error);
     }
   };
 
@@ -120,16 +105,17 @@ const ParticipantManagement = () => {
     setEditingParticipant(null);
   };
 
-  // Filter participants by search term (client-side)
-  const filteredParticipants = participants.filter(participant => {
-    if (!filters.search) return true;
-    const searchLower = filters.search.toLowerCase();
-    return (
-      participant.name.toLowerCase().includes(searchLower) ||
-      participant.email.toLowerCase().includes(searchLower) ||
-      participant.participantId.toLowerCase().includes(searchLower) ||
-      (participant.phone && participant.phone.includes(searchLower))
-    );
+  // Filter participants based on search and active status
+  const filteredParticipants = participants.filter(p => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.phone && p.phone.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesFilter =
+      filterActive === 'all' ||
+      (filterActive === 'active' && p.isActive) ||
+      (filterActive === 'inactive' && !p.isActive);
+    return matchesSearch && matchesFilter;
   });
 
   if (loading && participants.length === 0) {
@@ -145,118 +131,103 @@ const ParticipantManagement = () => {
 
   return (
     <PageLayout title="👥 Participant Management">
-      <div className="technology-management">
+      <div className="batch-management">
         {/* Header */}
         <div className="page-header">
           <h1>👥 Participant Management</h1>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-          >
+          <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
             + Add Participant
           </button>
         </div>
 
-        {/* Filters */}
+        {/* Search & Filters */}
         <div className="filters-section">
-          <div className="filter-group">
-            <label>Search:</label>
+          <div className="filter-group" style={{ flex: 2 }}>
+            <label>SEARCH:</label>
             <input
               type="text"
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Search by name, email, ID..."
+              placeholder="Search by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                padding: '8px 12px',
+                width: '100%',
+                padding: '10px 14px',
                 border: '1px solid #cbd5e1',
                 borderRadius: '6px',
-                fontSize: '0.875rem',
-                minWidth: '250px',
+                fontSize: '14px',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                outline: 'none',
+                cursor: 'text',
+                boxSizing: 'border-box',
+                fontFamily: 'inherit',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#3b82f6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#cbd5e1';
+                e.target.style.boxShadow = 'none';
               }}
             />
           </div>
           <div className="filter-group">
-            <label>Status:</label>
+            <label>STATUS:</label>
             <select
-              name="isActive"
-              value={
-                filters.isActive === null
-                  ? ''
-                  : filters.isActive === true
-                  ? 'true'
-                  : 'false'
-              }
-              onChange={handleFilterChange}
+              value={filterActive}
+              onChange={(e) => setFilterActive(e.target.value)}
             >
-              <option value="">All</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
           <button
             className="btn btn-secondary"
-            onClick={() => setFilters({ isActive: null, search: '' })}
+            onClick={() => { setSearchTerm(''); setFilterActive('all'); }}
           >
             Clear Filters
           </button>
         </div>
+
+        {/* Results Summary */}
+        {searchTerm || filterActive !== 'all' ? (
+          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#64748b' }}>
+            Showing {filteredParticipants.length} of {participants.length} participants
+          </div>
+        ) : null}
 
         {/* Participants Table */}
         <div className="table-container">
           {filteredParticipants.length === 0 ? (
             <div className="empty-state">
               <p>
-                {filters.search || filters.isActive !== null
-                  ? 'No participants found matching your filters.'
-                  : 'No participants registered yet. Add your first participant!'}
+                {participants.length === 0
+                  ? 'No participants yet. Add your first participant!'
+                  : 'No participants match your filters.'}
               </p>
             </div>
           ) : (
             <table className="eval-table">
               <thead>
                 <tr>
-                  <th>Participant ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
+                  <th>NAME</th>
+                  <th>EMAIL</th>
+                  <th>PHONE</th>
+                  <th>STATUS</th>
+                  <th>JOINED</th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredParticipants.map(participant => (
-                  <tr key={participant._id || participant.participantId}>
+                  <tr key={participant._id}>
                     <td>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: '#6366f1',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {participant.participantId}
-                      </span>
+                      <strong>{participant.name}</strong>
                     </td>
-                    <td>
-                      <div className="participant-info">
-                        <span className="name">{participant.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                        {participant.email}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                        {participant.phone || '—'}
-                      </span>
-                    </td>
+                    <td>{participant.email}</td>
+                    <td>{participant.phone || '—'}</td>
                     <td>
                       <span
                         className={`badge ${
@@ -266,22 +237,46 @@ const ParticipantManagement = () => {
                         {participant.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                        {new Date(participant.createdAt).toLocaleDateString()}
-                      </span>
+                    <td style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                      {participant.createdAt
+                        ? new Date(participant.createdAt).toLocaleDateString()
+                        : '—'}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '6px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
                         <button
                           className="btn btn-sm btn-secondary"
                           onClick={() => handleEdit(participant)}
+                          style={{
+                            backgroundColor: '#e2e8f0',
+                            color: '#475569',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDelete(participant.participantId)}
+                          style={{
+                            backgroundColor: '#ef4444',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                          }}
                         >
                           Delete
                         </button>
@@ -294,12 +289,7 @@ const ParticipantManagement = () => {
           )}
         </div>
 
-        {/* Summary */}
-        <div style={{ marginTop: '16px', fontSize: '0.875rem', color: '#64748b' }}>
-          Showing {filteredParticipants.length} of {participants.length} participants
-        </div>
-
-        {/* Create/Edit Modal */}
+        {/* Add/Edit Modal */}
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -321,20 +311,22 @@ const ParticipantManagement = () => {
                     onChange={handleInputChange}
                     required
                     placeholder="e.g., John Doe"
-                    minLength={3}
                   />
                 </div>
+
                 <div className="form-group">
-                  <label>Email Address *</label>
+                  <label>Email *</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    placeholder="e.g., john.doe@example.com"
+                    placeholder="e.g., john@example.com"
+                    disabled={!!editingParticipant}
                   />
                 </div>
+
                 <div className="form-group">
                   <label>Phone Number</label>
                   <input
@@ -342,9 +334,10 @@ const ParticipantManagement = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="e.g., +1234567890 (optional)"
+                    placeholder="e.g., +91 9876543210"
                   />
                 </div>
+
                 <div className="form-group">
                   <label className="checkbox-label">
                     <input
@@ -356,6 +349,7 @@ const ParticipantManagement = () => {
                     Active
                   </label>
                 </div>
+
                 <div className="modal-actions">
                   <button
                     type="button"
